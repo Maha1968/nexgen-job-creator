@@ -10,7 +10,9 @@ from reportlab.pdfgen import canvas
 # =========================
 # API key is stored in Streamlit Secrets as:
 # OPENAI_API_KEY = "sk-xxxxx"
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+import os
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+client = OpenAI()
 
 
 # =========================
@@ -150,3 +152,4 @@ st.caption(
     "Built for Nexgen recruiters. You can safely share this public URL with your team; "
     "the OpenAI API key is stored securely in Streamlit secrets and never exposed."
 )
+
