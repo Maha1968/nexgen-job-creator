@@ -1,18 +1,14 @@
 import streamlit as st
 from openai import OpenAI
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-
+from fpdf import FPDF
 
 # =========================
 #  OpenAI client
 # =========================
 # API key is stored in Streamlit Secrets as:
 # OPENAI_API_KEY = "sk-xxxxx"
-import os
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-client = OpenAI()
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 
 # =========================
@@ -60,38 +56,29 @@ Keep tone professional, friendly and concise.
 
 
 def job_post_to_pdf(text, title="Job_Posting"):
-    """Create a simple 1–2 page PDF from the generated text."""
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    """Create a simple PDF from the generated text using fpdf2."""
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_title(title)
+    pdf.set_font("Arial", size=11)
 
-    # Start a text object
-    textobject = c.beginText()
-    textobject.setTextOrigin(40, height - 50)
-    textobject.setFont("Helvetica", 11)
-
-    # Write line by line
     for line in text.split("\n"):
-        # Basic page-break handling
-        if textobject.getY() < 50:
-            c.drawText(textobject)
-            c.showPage()
-            textobject = c.beginText()
-            textobject.setTextOrigin(40, height - 50)
-            textobject.setFont("Helvetica", 11)
-        textobject.textLine(line)
+        pdf.multi_cell(0, 6, line)
+        pdf.ln(1)
 
-    c.drawText(textobject)
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    return BytesIO(pdf_bytes)
 
 
 # =========================
 #  Streamlit UI
 # =========================
-st.set_page_config(page_title="Nexgen Job Posting Helper", page_icon="🧩", layout="centered")
+st.set_page_config(
+    page_title="Nexgen Job Posting Helper",
+    page_icon="🧩",
+    layout="centered",
+)
 
 st.title("🧩 Nexgen Job Posting Helper")
 st.write(
@@ -103,14 +90,22 @@ with st.form("job_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        role = st.text_input("Role / Job Title*", placeholder="Bilingual L1 Support Lead (Japanese + Tamil)")
+        role = st.text_input(
+            "Role / Job Title*",
+            placeholder="Bilingual L1 Support Lead (Japanese + Tamil)",
+        )
         location = st.text_input("Location", placeholder="Coimbatore, Tamil Nadu")
 
     with col2:
-        experience = st.text_input("Experience range", placeholder="5+ years in L1 / Tech Support")
+        experience = st.text_input(
+            "Experience range", placeholder="5+ years in L1 / Tech Support"
+        )
         skills = st.text_area(
             "Key skills (comma separated)",
-            placeholder="Japanese JLPT N3/N2, Tamil (native), ServiceNow, JIRA, Confluence, Java/.NET/Front-end basics",
+            placeholder=(
+                "Japanese JLPT N3/N2, Tamil (native), ServiceNow, JIRA, Confluence, "
+                "Java/.NET/Front-end basics"
+            ),
             height=100,
         )
 
@@ -128,9 +123,13 @@ if submitted:
     else:
         with st.spinner("Calling OpenAI and drafting your job post..."):
             try:
-                post_text = generate_job_post(role, location, experience, skills, extra_notes)
+                post_text = generate_job_post(
+                    role, location, experience, skills, extra_notes
+                )
             except Exception as e:
-                st.error("There was an error talking to OpenAI. Please check the API key and logs.")
+                st.error(
+                    "There was an error talking to OpenAI. Please check the API key and logs."
+                )
                 st.exception(e)
             else:
                 st.success("Done! Review your job post below 👇")
@@ -152,4 +151,3 @@ st.caption(
     "Built for Nexgen recruiters. You can safely share this public URL with your team; "
     "the OpenAI API key is stored securely in Streamlit secrets and never exposed."
 )
-
