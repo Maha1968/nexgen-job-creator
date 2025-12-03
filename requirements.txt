@@ -1,6 +1,5 @@
 streamlit
 openai==1.23.2
-python-dotenv
-reportlab
+fpdf2
 
 
